@@ -48,9 +48,8 @@ func NewPageCache() *PageCache {
 
 // Get all resources in an HTML document. This includes all hyperlinks, js, css resoures
 func (r *resource) Parse(url string) {
-
+	fmt.Printf("parsing %s\n", url)
 	if _, ok := r.Cache.Visited[url]; !ok {
-		//cache hit
 		r.Cache.mutex.Lock()
 
 		if r.getLinkType(url) != "html" {
@@ -72,21 +71,15 @@ func (r *resource) Parse(url string) {
 		}
 
 		for _, resource := range resources {
-			if _, ok := r.Cache.Visited[resource]; !ok {
-				/*if strings.HasPrefix(resource, "http://www.digitalocean.com/company") || strings.HasPrefix(resource, "http://www.digitalocean.com/community") || strings.HasPrefix(resource, "https://www.digitalocean.com/community") {
-					continue
-				}*/
-				r.Parse(resource)
-			}
+			//if _, ok := r.Cache.Visited[resource]; !ok {
+			r.Parse(resource)
+			//	}
 		}
-	} else {
-		fmt.Println("cache hit")
 	}
 
 }
 
 func (r *resource) GetResources(url string) []string {
-	fmt.Printf("getting resources for %s\n", url)
 	links := make([]string, 0)
 
 	resp, err := http.Get(url)
@@ -95,6 +88,7 @@ func (r *resource) GetResources(url string) []string {
 		fmt.Printf("error: %s\n", err.Error())
 		fmt.Printf("resource: %+v\n", r)
 		//handle error
+		return links
 	}
 
 	p, err := ioutil.ReadAll(resp.Body)
@@ -102,6 +96,7 @@ func (r *resource) GetResources(url string) []string {
 	if err != nil {
 		fmt.Printf("error: %s\n", err.Error())
 		fmt.Printf("resource: %+v\n", r)
+		return links
 	}
 
 	//log
