@@ -48,9 +48,6 @@ func NewParser(url string) *parser {
 		wg:      &sync.WaitGroup{},
 	}
 }
-func (p *PageCache) Set(key string, val *resource) {
-
-}
 
 func NewPageCache() *PageCache {
 	return &PageCache{
