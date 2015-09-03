@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -74,8 +75,8 @@ func TestGetLinkType(t *testing.T) {
 		},
 		{
 			Name:             "some non html resource",
-			Link:             "/something/style.zzz",
-			ExpectedLinkType: "zzz",
+			Link:             "/something/style.zip",
+			ExpectedLinkType: "zip",
 		},
 	}
 	parser := NewParser("")
@@ -83,7 +84,7 @@ func TestGetLinkType(t *testing.T) {
 	for _, test := range tests {
 
 		linkType := parser.getLinkType(test.Link)
-		assert.Equal(t, linkType, test.ExpectedLinkType)
+		assert.Equal(t, test.ExpectedLinkType, linkType, test.Name)
 	}
 
 }
@@ -156,8 +157,8 @@ func TestParser(t *testing.T) {
 		Cache:   NewPageCache(),
 		getter:  newMockGetter(),
 		baseUrl: baseUrl,
+		wg:      &sync.WaitGroup{},
 	}
-	p.Parse(fmt.Sprintf("http://%s", baseUrl))
-
+	p.Parse()
 	assert.Equal(t, 6, len(p.Cache.Visited))
 }

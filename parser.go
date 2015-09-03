@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"regexp"
 	"strings"
@@ -35,6 +36,8 @@ type parser struct {
 	Cache   *PageCache
 	getter  Getter
 	baseUrl string
+	wg      *sync.WaitGroup
+	logger  *log.Logger
 }
 
 type PageCache struct {
@@ -47,6 +50,7 @@ func NewParser(url string) *parser {
 		Cache:   NewPageCache(),
 		getter:  &getter{},
 		baseUrl: url,
+		wg:      &sync.WaitGroup{},
 	}
 }
 func (p *PageCache) Set(key string, val *resource) {
@@ -60,15 +64,24 @@ func NewPageCache() *PageCache {
 	}
 }
 
+func (p *parser) Parse() {
+	p.wg.Add(1)
+	p.parse(fmt.Sprintf("http://%s", p.baseUrl))
+
+}
+
 // Get all resources in an HTML document. This includes all hyperlinks, js, css resoures
-func (p *parser) Parse(url string) {
-	fmt.Printf("parsing %s\n", url)
+func (p *parser) parse(url string) {
+	log.Printf("parsing %s\n", url)
+	p.Cache.mutex.Lock()
 	if _, ok := p.Cache.Visited[url]; !ok {
-		p.Cache.mutex.Lock()
+		p.Cache.mutex.Unlock()
 
 		if p.getLinkType(url) != LinkTypeHTML {
+			p.Cache.mutex.Lock()
 			p.Cache.Visited[url] = &resource{Url: url}
 			p.Cache.mutex.Unlock()
+			p.wg.Done()
 			return
 		}
 		resources := p.GetResources(url)
@@ -77,18 +90,31 @@ func (p *parser) Parse(url string) {
 			Url:      url,
 			Children: resources,
 		}
+		p.Cache.mutex.Lock()
 		p.Cache.Visited[url] = resource
 		p.Cache.mutex.Unlock()
 
 		if len(resources) == 0 {
+			p.wg.Done()
 			return
 		}
-
-		for _, resource := range resources {
-			p.Parse(resource)
+		for _, link := range resources {
+			p.Cache.mutex.Lock()
+			if _, ok := p.Cache.Visited[link]; !ok {
+				p.wg.Add(1)
+				go func(r string) {
+					p.parse(r)
+				}(link)
+			}
+			p.Cache.mutex.Unlock()
 		}
+		p.wg.Done()
+	} else {
+		p.Cache.mutex.Unlock()
+		p.wg.Done()
 	}
 
+	p.wg.Wait()
 }
 
 type getter struct{}
@@ -99,17 +125,15 @@ type Getter interface {
 
 func (g *getter) get(url string) (string, error) {
 	resp, err := http.Get(url)
-	//log
 	if err != nil {
-		fmt.Printf("error: %s\n", err.Error())
-		//handle error
+		log.Printf("http get error: %s\n", err.Error())
 		return "", nil
 	}
 
 	page, err := ioutil.ReadAll(resp.Body)
 
 	if err != nil {
-		fmt.Printf("error: %s\n", err.Error())
+		log.Printf("read body error: %s\n", err.Error())
 		return "", err
 	}
 
@@ -118,6 +142,7 @@ func (g *getter) get(url string) (string, error) {
 
 func (p *parser) GetResources(url string) []string {
 	links := make([]string, 0)
+	seen := make(map[string]bool)
 
 	page, err := p.getter.get(url)
 
@@ -134,10 +159,16 @@ func (p *parser) GetResources(url string) []string {
 		if newUrl == "" || newUrl == url {
 			continue
 		}
-		if err != nil {
 
+		if err != nil {
+			log.Printf("parse link error: %s", err.Error())
+			continue
 		}
-		links = append(links, newUrl)
+
+		if !seen[newUrl] {
+			links = append(links, newUrl)
+			seen[newUrl] = true
+		}
 	}
 
 	return links
