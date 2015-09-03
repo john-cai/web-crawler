@@ -70,7 +70,6 @@ func (p *parser) Parse() {
 
 }
 
-// Get all resources in an HTML document. This includes all hyperlinks, js, css resoures
 func (p *parser) parse(url string) {
 	log.Printf("parsing %s\n", url)
 	p.Cache.mutex.Lock()
