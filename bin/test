@@ -1,0 +1,11 @@
+#!/bin/bash -e
+
+# Get repo root by sub-shelling and getting the parent directory of this script
+DIR=$( cd $(dirname $0)/.. && pwd )
+
+echo -n "=> Testing with "
+go version
+
+# Create version.go file
+echo "=> go test -race"
+go test -race
