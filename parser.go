@@ -24,12 +24,7 @@ type Resource interface {
 
 type resource struct {
 	Url      string
-	Type     string
 	Children []string
-	Parent   *resource
-	Body     string
-	Parser   *parser
-	Cache    *PageCache
 }
 
 type parser struct {
