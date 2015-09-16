@@ -5,7 +5,7 @@ A web crawler written in Go
 ## usage
 
 ```
-./web_crawler --domain www.digitalocean.com
+./web_crawler --domain www.example.com
 
 ```
 

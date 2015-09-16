@@ -14,7 +14,6 @@ import (
 const (
 	ResourcesRegex         = `(href|src)="([^"]+)"`
 	ResourceExtensionRegex = `^.*\.(jpg|JPG|gif|GIF|doc|DOC|pdf|PDF|zip|png|svg|css|js|eps)$`
-	DigitalOceanBaseUrl    = "www.digitalocean.com"
 	LinkTypeHTML           = "html"
 )
 
@@ -37,7 +36,7 @@ type parser struct {
 
 type PageCache struct {
 	mutex   *sync.Mutex
-	Visited map[string]*resource // a map containing body of pages already visited
+	Visited map[string]*resource // a map containing pages already visited
 }
 
 func NewParser(url string) *parser {
@@ -120,6 +119,7 @@ func (g *getter) get(url string) (string, error) {
 		log.Printf("http get error: %s\n", err.Error())
 		return "", nil
 	}
+	defer resp.Body.Close()
 
 	page, err := ioutil.ReadAll(resp.Body)
 
